@@ -1,0 +1,1339 @@
+---
+title: "COVID-19 Impact on hip replacements - Data tables"
+author: "Alexander Lawless"
+date: "21/06/2021"
+output: 
+  html_document:
+    theme: cerulean
+    toc: TRUE
+    toc_float: TRUE
+    toc_collapsed: TRUE
+    toc_depth: 4
+    number_sections: FALSE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width = 9, fig.height = 6)
+
+library(tidyverse)
+library(odbc)
+library(DBI)
+library(plotly)
+library(lubridate)
+library(ggrepel)
+library(janitor)
+library(knitr)
+library(PropCIs)
+library(DT)
+
+create_dt <- function(x){
+  DT::datatable(x,
+                extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                               buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+                               lengthMenu = list(c(7, 10,50,-1),
+                                                 c(7, 10,50,"All"))))
+}
+
+## Set SU theme ####
+My_rgb2hex <- function(r,g,b) sprintf('#%s',paste(as.hexmode(c(r,g,b)),collapse = ''))
+
+SU_colours <- c (
+  `orange` = My_rgb2hex(248,191,7),# "#f9bf07",
+  `charcoal` = My_rgb2hex(44,40,37),# "#2c2825",
+  `slate` = My_rgb2hex(104,111,115), # "#686f73",
+  `blue` = My_rgb2hex(88,29,193), # "#5881c1",
+  `red` = My_rgb2hex(236,101,85), # "#ec6555",
+  #additional accent colours from word doc template
+  `yellow` = My_rgb2hex(252,229,155),
+  `grey` = My_rgb2hex(163,168,172),
+  `white` = My_rgb2hex(255,255,255),
+  #light and dark ends from colour theme in word doc
+  `light orange` = My_rgb2hex(253,242,205),
+  `dark orange` = My_rgb2hex(124,95,3),
+  `light charcoal` = My_rgb2hex(235,233,231),
+  `dark charcoal` = 	"#000000",#black
+  `light slate` = My_rgb2hex(224,226,227),
+  `dark slate` = My_rgb2hex(51,55,57),
+  `light blue` = My_rgb2hex(221,229,242),
+  `dark blue` = My_rgb2hex(38,61,102),
+  `light red` = My_rgb2hex(251,224,220),
+  `dark red` = My_rgb2hex(144,29,16),
+  `light yellow` = My_rgb2hex(254,249,235),
+  `dark yellow` = My_rgb2hex(197,152,5),
+  `light grey`=My_rgb2hex(236,237,238),
+  `dark grey` = My_rgb2hex(79,84,88),
+  `light white`=My_rgb2hex(242,242,242),
+  `dark white` =My_rgb2hex(127,127,127),
+  `red2` = My_rgb2hex(215,25,28),
+  `orange2` = My_rgb2hex(253,174,97),
+  `yellow2` = My_rgb2hex(255,255,191),
+  `green2` = My_rgb2hex(171,221,164),
+  `blue2` = My_rgb2hex(43,131,186)
+)
+
+
+
+SU_cols <- function(...) {
+  cols <- c(...)
+  
+  if (is.null(cols))
+    return (SU_colours)
+  
+  SU_colours[cols]
+}
+
+SU_palettes <- list(
+  `main` = SU_cols("orange","charcoal","slate","blue","red"),
+  `oranges` = SU_cols("light orange","orange","dark orange"),
+  `slates` = SU_cols("light slate","slate","dark slate"),
+  `mixed` = SU_cols("dark red","orange","yellow","light blue","slate"),
+  `oj_coal` = SU_cols("yellow","orange","red","dark red","dark charcoal"),
+  `oj_red` = SU_cols("yellow","orange","red","dark red"),
+  `white_oj_coal` = SU_cols("white","yellow","orange","red","dark red","dark charcoal"),#added since shared
+  `lyellow_oj_coal` = SU_cols("light yellow","orange","red","dark red","dark charcoal"),#added since shared
+  `wy_oj_coal` = SU_cols("white","light yellow","yellow","orange","red","dark red","charcoal","dark charcoal"),
+  `red_coal` = SU_cols("red","dark red","charcoal","dark charcoal"),
+  `blue_yellow_red` = SU_cols("red2","orange2","yellow2","green2","blue2"),
+  `red_yellow_blue` = SU_cols("blue2","green2","yellow2","orange2","red2")
+)
+
+SU_pal <- function(palette = "main", reverse = FALSE, ...) {
+  pal <- SU_palettes[[palette]]
+  
+  if (reverse) pal <- rev(pal)
+  
+  colorRampPalette(pal, ...)
+}   
+
+scale_color_SU <- function(palette = "main", discrete = TRUE, reverse = FALSE, ...) {
+  pal <- SU_pal(palette = palette, reverse = reverse)
+  
+  if (discrete) {
+    discrete_scale("colour", paste0("SU_", palette), palette = pal, ...)
+  } else {
+    scale_color_gradientn(colours = pal(256), ...)
+  }
+}
+
+
+scale_fill_SU <- function(palette = "main", discrete = TRUE, reverse = FALSE, ...) {
+  pal <- SU_pal(palette = palette, reverse = reverse)
+  
+  if (discrete) {
+    discrete_scale("fill", paste0("SU_", palette), palette = pal, ...)
+  } else {
+    scale_fill_gradientn(colours = pal(256), ...)
+  }
+}  
+
+##Theme
+
+
+##set theme settings
+theme_SU<-
+  function (base_size){
+    theme_minimal(
+      #base_family = "Segoe UI", 
+      base_size=12
+      ) %+replace% 
+      theme(axis.title = element_text(size=11, face="bold",colour=SU_cols("charcoal")),
+            plot.title = element_text(hjust=0,face="bold",size=12,colour=SU_cols("charcoal"),margin=margin(b=4,unit="pt")),
+            plot.subtitle = element_text(hjust=0,face="italic",size=10,colour=SU_cols("charcoal"),margin=margin(b=4,unit="pt")),
+            plot.caption = element_text(hjust = 0,face="italic",size=9,colour=SU_cols("slate"),margin=margin(b=4,unit="pt")),
+            legend.text = element_text(size=10,colour=SU_cols("charcoal")),
+            legend.title = element_text(face="bold",size=11,colour=SU_cols("charcoal"),margin=margin(b=4,unit="pt")))
+  }
+
+
+
+##set theme by 
+theme_set(theme_SU())
+
+
+
+## A. Import SUS data ####
+
+# Connection
+a.con <- dbConnect(odbc(), 
+                 Driver = "SQL Server", 
+                 server = "PRODNHSESQL101", 
+                 Database = "NHSE_Sandbox_Spec_Neurology")
+
+a_lsoa_to_stp <- "https://opendata.arcgis.com/datasets/d30531b5888a4e34be4746399d696409_0.csv" %>%
+  read_csv() %>% 
+  clean_names()
+
+a_stp_to_nhsr <- "https://opendata.arcgis.com/datasets/888dc5cc66ba4ad9b4d935871dcce251_0.csv" %>%
+  read_csv() %>% 
+  clean_names()
+
+
+# Import SUS inpatient hip activity (2018 onwards)
+a.ip_hip <-
+  as_tibble(
+    dbGetQuery(a.con, '
+select *
+from [NHSE_Sandbox_Spec_Neurology].[dbo].[HF_covid_hip_activity_2]')) %>% 
+  mutate(procedure_type = case_when(
+    (totalHipReplacementPrimary == 1 |
+      totalProstheticReplacementHeadFemurPrimary == 1 |
+      hybridProstheticHipReplacementPrimary == 1 |
+      otherHipReplacementPrimary == 1 |
+      resurfacingArthroplastyJointPrimary == 1 ) ~ "Primary",
+    (totalHipReplacementRevision == 1 |
+       totalProstheticReplacementHeadFemurRevision == 1 |
+       hybridProstheticHipReplacementRevision == 1 |
+       otherHipReplacementRevision == 1|
+       resurfacingArthroplastyJointRevision == 1) ~ "Revision",
+    TRUE ~ "NA" )) %>% 
+  mutate(Age_range = case_when(Age_at_Start_of_Episode_SUS >= 0 & Age_at_Start_of_Episode_SUS < 20 ~ "0-19",
+                               (Age_at_Start_of_Episode_SUS >= 20 & Age_at_Start_of_Episode_SUS <40) ~  "20-39",
+                               (Age_at_Start_of_Episode_SUS >= 40 & Age_at_Start_of_Episode_SUS <60) ~  "40-59",
+                               (Age_at_Start_of_Episode_SUS >= 60 & Age_at_Start_of_Episode_SUS <80) ~  "60-79",
+                               (Age_at_Start_of_Episode_SUS >= 80 & Age_at_Start_of_Episode_SUS <100) ~ "80-99",
+                               Age_at_Start_of_Episode_SUS >= 100 ~ "100+")) %>% 
+  mutate(Age_range = factor(Age_range, levels = c("0-19", 
+                                                  "20-39",
+                                                  "40-59",
+                                                  "60-79",
+                                                  "80-99", 
+                                                  "100+"))) %>% 
+  left_join(a_lsoa_to_stp, by = c("Der_Postcode_LSOA_2011_Code" = "lsoa11cd")) %>% 
+  left_join(a_stp_to_nhsr %>% 
+              select(stp20cd, nhser20cd, nhser20nm) %>% 
+              distinct(), 
+            by = c("stp20cd"))
+
+a.ip_hip_unplanned <-
+  as_tibble(
+    dbGetQuery(a.con, '
+select *
+from [NHSE_Sandbox_Spec_Neurology].[dbo].[HF_covid_hip_activity_ip_unplanned]'))
+
+a.opa_hip <-
+as_tibble(
+  dbGetQuery(a.con, '
+select *
+from [NHSE_Sandbox_Spec_Neurology].[DBO].[HF_covid_hip_activity_OPA]'))
+
+a.ed_hip <-
+  as_tibble(
+    dbGetQuery(a.con, '
+select *
+from [NHSE_Sandbox_Spec_Neurology].[DBO].[HF_covid_hip_activity_ED]'))
+
+
+a.ed_diabetes <-
+  as_tibble(
+    dbGetQuery(a.con, '
+select *
+from [NHSE_Sandbox_Spec_Neurology].[DBO].[HF_covid_diabetes_activity_ED]'))
+
+# Disconnect! # 
+dbDisconnect(a.con) 
+
+## B.1. Time series summaries ####
+# Monthly 
+# Inpatients
+b_hip_ip_month <-
+a.ip_hip %>% 
+  group_by(substr(Admission_Date, 1, 7)) %>% #reduce discharge date to discharge month
+  summarise(n_admissions = n_distinct(APCS_Ident)) %>%  #sum monthly discharges
+  rename(Month = 1) %>% 
+  mutate(Month = paste0(Month,"-01")) %>% #Add day value for as.Date function
+  mutate(Month = as.Date(Month)) %>% #mutate from chr to date
+  filter(Month > 2018-01) 
+# Outpatients
+b_hip_opa_month <-
+a.opa_hip %>% 
+  group_by(substr(Appointment_Date, 1, 7)) %>% #reduce discharge date to discharge month
+  summarise(n_appointments = n_distinct(OPA_Ident)) %>%  #sum monthly appointments
+  rename(Month = 1) %>% 
+  mutate(Month = paste0(Month,"-01")) %>% #Add day value for as.Date function
+  mutate(Month = as.Date(Month)) %>% #mutate from chr to date
+  filter(Month > 2018-01) 
+# ED
+b_hip_ed_month <-
+a.ed_hip %>% 
+  group_by(substr(Arrival_Date, 1, 7)) %>% #reduce discharge date to discharge month
+  summarise(n_attendances = n_distinct(EC_Ident)) %>%  #sum monthly attendances
+  rename(Month = 1) %>% 
+  mutate(Month = paste0(Month,"-01")) %>% #Add day value for as.Date function
+  mutate(Month = as.Date(Month)) %>% #mutate from chr to date
+  filter(Month > 2018-01)
+# Merge
+b_hip_all_month <-
+  b_hip_ip_month %>% 
+  left_join(b_hip_opa_month, by = ("Month")) %>% 
+  left_join(b_hip_ed_month, by = ("Month")) %>% 
+  pivot_longer(cols = -Month, names_to = "Activity", values_to = "Count") %>% 
+  mutate(Activity = case_when(Activity == "n_admissions" ~ "Inpatient",
+                              Activity == "n_appointments" ~ "Outpatient",
+                              Activity == "n_attendances" ~ "Emergency Care",
+                              TRUE ~ "NA")) %>% 
+  mutate(Activity = factor(Activity, levels = c("Inpatient", "Outpatient", "Emergency Care")))
+
+# Daily
+# Inpatient
+b_hip_ip_daily <-
+  a.ip_hip %>% 
+  group_by(Admission_Date) %>% 
+  summarise(n_admissions = n_distinct(APCS_Ident)) %>% 
+  mutate(Admission_Date = as.Date(Admission_Date)) %>% 
+  filter(Admission_Date > 2018-01-01) 
+# Outpatient
+b_hip_opa_daily <-
+  a.opa_hip %>% 
+  group_by(Appointment_Date) %>% 
+  summarise(n_appointments = n_distinct(OPA_Ident)) %>% 
+  mutate(Appointment_Date = as.Date(Appointment_Date)) %>% 
+  filter(Appointment_Date > 2018-01-01) 
+#ED
+b_hip_ed_daily <-
+  a.ed_hip %>% 
+  group_by(Arrival_Date) %>% 
+  summarise(n_attendances = n_distinct(EC_Ident)) %>% 
+  mutate(Arrival_Date = as.Date(Arrival_Date)) %>% 
+  filter(Arrival_Date > 2018-01-01)
+#Merge
+b_hip_all_daily <-
+  b_hip_ip_daily %>%
+  rename(Date = 1) %>% 
+  left_join(b_hip_opa_daily %>% rename(Date = 1), by = ("Date")) %>% 
+  left_join(b_hip_ed_daily %>% rename(Date = 1), by = ("Date")) %>% 
+  pivot_longer(cols = -Date, names_to = "Activity", values_to = "Count") %>% 
+  mutate(Activity = case_when(Activity == "n_admissions" ~ "Inpatient",
+                              Activity == "n_appointments" ~ "Outpatient",
+                              Activity == "n_attendances" ~ "Emergency Care",
+                              TRUE ~ "NA")) %>% 
+  mutate(Activity = factor(Activity, levels = c("Inpatient", "Outpatient", "Emergency Care")))
+
+
+
+## B.2. Interactive graphs #### 
+# Plot multiple trends alongside each other
+b_hip_all_month_wide <-
+b_hip_all_month %>% 
+  pivot_wider(id_cols = Month, names_from = Activity, values_from = Count) %>% clean_names()
+
+
+## C. Cohort characteristics ####
+
+## C.1. Age ####
+c_ip_hip_age <-
+a.ip_hip %>% 
+  group_by(Admission_Date, Age_range) %>% 
+  summarise(Admissions = n_distinct(APCS_Ident)) %>% 
+  mutate(daily_sum = sum(Admissions)) %>% 
+  mutate(prop = Admissions/daily_sum*100) %>% 
+  mutate(prop = round(prop, 2)) %>% 
+  ungroup()
+
+# Stacked bar chart 
+c_ip_hip_age_stacked_data <-
+  c_ip_hip_age %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week, Age_range) %>% 
+  summarise(sum = sum(Admissions)) %>% 
+  mutate(prop = sum/sum(sum)*100) %>% 
+  mutate(Proportion = round(prop, digits = 2)) %>% 
+  drop_na(Proportion) 
+
+
+
+# Admissions in all ages as reference
+c_ip_hip_admission_volume <-
+a.ip_hip %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week) %>% 
+  summarise(Admission_count = n()) %>% 
+  mutate(ID = "Inpatient") 
+
+
+## C.2. Deprivation #### 
+con_ref <- dbConnect(odbc(), 
+                 Driver = "SQL Server", 
+                 server = "PRODNHSESQL101", 
+                 Database = "NHSE_Reference")
+
+c_lsoa_imd <- tbl(con_ref, "tbl_Ref_Other_Deprivation_By_LSOA") %>% 
+  collect()
+
+# Disconnect! # 
+dbDisconnect(con_ref) 
+
+c_ip_hip_imd <-
+a.ip_hip  %>% 
+  select(1:9, procedure_type, Age_range) %>% 
+  left_join(select(c_lsoa_imd, LSOA_Code, IMD_Score, IMD_Rank, IMD_Decile), by = c("Der_Postcode_LSOA_2011_Code" = "LSOA_Code")) %>% 
+  mutate(IMD_Quintile = case_when(IMD_Decile %in% c(1,2) ~ 1,
+                                  IMD_Decile %in% c(3,4) ~ 2,
+                                  IMD_Decile %in% c(5,6) ~ 3,
+                                  IMD_Decile %in% c(7,8) ~ 4,
+                                  IMD_Decile %in% c(9,10) ~ 5,
+                                  TRUE ~ 99)) %>% 
+  group_by(Admission_Date, IMD_Quintile) %>% 
+  summarise(Admissions = n_distinct(APCS_Ident)) %>% 
+  mutate(daily_sum = sum(Admissions)) %>% 
+  mutate(prop = Admissions/daily_sum*100) %>% 
+  mutate(prop = round(prop, 2)) 
+
+c_ip_hip_imd_wk <-
+c_ip_hip_imd %>% 
+  ungroup() %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week, IMD_Quintile) %>% 
+  summarise(sum = sum(Admissions)) %>% 
+  mutate(prop = sum/sum(sum)*100) %>% 
+  mutate(IMD_Quintile = as.character(IMD_Quintile))
+
+c.ip_hip_imd_vis <-
+  c_ip_hip_imd_wk %>% 
+  ggplot(aes(x = Admission_week, y = prop, group = IMD_Quintile, colour = IMD_Quintile  )) +
+  annotate("rect", xmin = as.Date("2020-03-23"), xmax = as.Date("2020-07-04"), ymin = 0, ymax = 40, 
+           fill= "#fed976", alpha = 0.8) + # Lockdown 1
+  annotate("rect", xmin = as.Date("2020-10-14"), xmax = as.Date("2021-01-04"), ymin = 0, ymax = 40, 
+           fill= "#fed976", alpha = 0.8) + # 3 tier system
+  annotate("text", x = as.Date("2020-05-13"), y = 37, label = "National lockdown",size = 3, angle = 90) +
+  annotate("text", x = as.Date("2020-11-24"), y = 34, label = "3 Tier lockdown",size = 3, angle = 90) +
+  geom_point( alpha = 0.75) +
+  geom_smooth(method = "loess", span = 0.2) +
+  scale_colour_brewer(palette = "Spectral") +
+  ylim(0,40) +
+  labs(title = "During the initial lockown, hip care was focused on the very rich and very poor",
+       subtitle = "Weekly proportion of hip procedures performed by IMD deprivation quintile: National, elective inpatient episodes",
+       x = "Admission week",
+       y = "Proportion admissions",
+       caption = "Note: IMD quintile 1 represents the poorest 20% of the population",
+       colour = "")
+
+## C.2.2. Deprivation x Age ####
+c_ip_hip_imd_age_wk <-
+  a.ip_hip  %>% 
+  select(1:9, procedure_type, Age_range) %>% 
+  left_join(select(c_lsoa_imd, LSOA_Code, IMD_Score, IMD_Rank, IMD_Decile), by = c("Der_Postcode_LSOA_2011_Code" = "LSOA_Code")) %>% 
+  mutate(IMD_Quintile = case_when(IMD_Decile %in% c(1,2) ~ 1,
+                                  IMD_Decile %in% c(3,4) ~ 2,
+                                  IMD_Decile %in% c(5,6) ~ 3,
+                                  IMD_Decile %in% c(7,8) ~ 4,
+                                  IMD_Decile %in% c(9,10) ~ 5,
+                                  TRUE ~ 99)) %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week, Age_range, IMD_Quintile) %>% 
+  summarise(Admissions = n_distinct(APCS_Ident)) %>%
+  ungroup() %>% group_by(Admission_week) %>% 
+  mutate(weekly_sum = sum(Admissions)) %>% 
+  mutate(Proportion = Admissions/weekly_sum*100) %>% 
+  mutate(Proportion = round(Proportion, 2)) 
+
+
+## C.3. Ethnicity ####
+c_ethnicity_lookup <-
+tribble(
+  ~Ethnic_Category, ~Ethnic_Category_Desc, ~Ethnicity_broad,
+ 
+  "99",	"Not known", "Not known",	
+  "A",	"British", "White",
+  "B",	"Irish"	, "White",
+  "C",	"Any other white background", "White",
+  "D",	"White and black caribbean",	"Mixed",
+  "E",	"White and black african",	"Mixed",
+  "F",	"White and asian",	"Mixed",
+  "G",	"Any other mixed background", "Mixed",
+  "H",	"Indian", "Asian",
+  "J",	"Pakistani",	"Asian",
+  "K",	"Bangladeshi",	"Asian",
+  "L",	"Any other asian background", "Asian",
+  "M",	"Caribbean",	"Black",
+  "N",	"African", "Black",
+  "P",	"Any other black background", "Black",
+  "R",	"Chinese", "Asian",
+  "S",	"Any other ethnic group", "Other",
+  "Z",	"Not stated", "Not known",
+  "NA", "Not known", "Not known"
+  )
+
+# Granular ethnicity
+c_ip_hip_ethnicity <-
+  a.ip_hip %>% 
+  mutate(Ethnic_Group = case_when(Ethnic_Group %in% c("99", "NA") ~ Ethnic_Group,
+                                  TRUE ~ substr(Ethnic_Group,1,1)
+                                  )) %>% # Shorten Ethnic group to first character to clean data (except when coded as 99 or NA)
+  mutate(Ethnic_Group = case_when(is.na(Ethnic_Group) ~ "99",
+                                  TRUE ~ Ethnic_Group)) %>% # Replace NA's with "NA" to left_join to "Not Known"
+  left_join(c_ethnicity_lookup, by = c("Ethnic_Group" = "Ethnic_Category")) %>% 
+  group_by(Admission_Date, Ethnic_Group, Ethnic_Category_Desc, Ethnicity_broad) %>% 
+  summarise(Admissions = n_distinct(APCS_Ident)) %>% 
+  ungroup() %>%  group_by(Admission_Date) %>% 
+  mutate(daily_sum = sum(Admissions)) %>% 
+  mutate(prop = Admissions/daily_sum*100)
+
+# Weekly ethnicity proportions 
+c_ip_hip_ethnicity_wk <-
+  c_ip_hip_ethnicity %>% 
+  ungroup() %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week, Ethnic_Category_Desc) %>% 
+  summarise(sum = sum(Admissions)) %>% 
+  mutate(prop = sum/sum(sum)*100) %>% 
+  mutate(Proportion = round(prop, digits = 2)) %>% 
+  drop_na(Proportion) %>% 
+  mutate(Ethnicity = Ethnic_Category_Desc)
+
+# Broad
+c_ip_hip_ethnicity_broad <-
+c_ip_hip_ethnicity %>% 
+  ungroup() %>% 
+  mutate(Admission_week = floor_date(as.Date(Admission_Date), unit = "week")) %>% 
+  group_by(Admission_week, Ethnicity_broad) %>% 
+  summarise(sum = sum(Admissions)) %>% 
+  mutate(prop = sum/sum(sum)*100) %>% 
+  ungroup() %>% 
+  mutate(Proportion = round(prop, digits = 2)) %>% 
+  drop_na(Proportion)
+
+
+## E.3. Admission deficit #### 
+e_hip_ip_week_number <-
+  b_hip_ip_daily %>% 
+  mutate(year = year(Admission_Date),
+         month = months(Admission_Date), 
+         week_number = isoweek(Admission_Date)) %>% 
+  group_by(year, week_number) %>% 
+  summarise(weekly_admissions = sum(n_admissions)) %>% 
+  ungroup()
+
+e_hip_ip_week_number_wide <-
+e_hip_ip_week_number %>% 
+  filter(year == 2020) %>% 
+  rename(n_2020 = weekly_admissions) %>% 
+  select(-year) %>% 
+  left_join(e_hip_ip_week_number %>% 
+              filter(year == 2018) %>% 
+              select(-year) %>% 
+              rename(n_2018 = weekly_admissions), by = c("week_number"), keep = FALSE) %>% 
+  left_join(e_hip_ip_week_number %>% 
+              filter(year == 2019) %>% 
+              select(-year) %>% 
+              rename(n_2019 = weekly_admissions), by = c("week_number"), keep = FALSE) %>% 
+  group_by(week_number) %>% 
+  mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+  ungroup() %>% 
+  mutate(def = Avg1819 - n_2020) %>% 
+  mutate(PC_def = case_when(
+    week_number < 13 ~ 0,
+    week_number >= 13 ~ Avg1819 - n_2020)) # Additional variable to start deficit from lockdown start
+
+## E.3.2. Demographic index: Comparing 2020 to 18/19 mean by subgroups ####
+# Admission count by demographic subgroups  
+e_hip_ip_demographic_index <-
+a.ip_hip %>% 
+  #Ethnicity
+  mutate(
+    Ethnic_Group = case_when(Ethnic_Group %in% c("99", "NA") ~ Ethnic_Group,
+                             TRUE ~ substr(Ethnic_Group,1,1)
+                             )) %>% # Shorten Ethnic group to first character to clean data (except when coded as 99 or NA)
+  mutate(
+    Ethnic_Group = case_when(is.na(Ethnic_Group) ~ "99",
+                             TRUE ~ Ethnic_Group)) %>% # Replace NA's with "NA" to left_join to "Not Known"
+  left_join(c_ethnicity_lookup, by = c("Ethnic_Group" = "Ethnic_Category")) %>% 
+  # Deprivation 
+  left_join(select(c_lsoa_imd, LSOA_Code, IMD_Score, IMD_Rank, IMD_Decile), by = c("Der_Postcode_LSOA_2011_Code" = "LSOA_Code")) %>% 
+  mutate(IMD_Quintile = case_when(IMD_Decile %in% c(1,2) ~ 1,
+                                  IMD_Decile %in% c(3,4) ~ 2,
+                                  IMD_Decile %in% c(5,6) ~ 3,
+                                  IMD_Decile %in% c(7,8) ~ 4,
+                                  IMD_Decile %in% c(9,10) ~ 5,
+                                  TRUE ~ 99)) %>% 
+  # Activity count by demographic and region
+  mutate(Admission_Date = as.Date(Admission_Date)) %>% 
+  group_by(Admission_Date, nhser20nm, Age_range, Sex, Ethnic_Category_Desc, Ethnicity_broad, IMD_Quintile) %>% 
+  summarise(Admission_count = n_distinct(APCS_Ident)) %>% 
+  ungroup()
+
+
+# Function: get admission count and deficit by demographic 
+e_get_admission_deficit <- function(demographic_var) {
+  
+  e_hip_ip_demographic_index <- 
+    e_hip_ip_demographic_index %>%
+    mutate(demographic_var = {{demographic_var}})
+  
+  sub_data <-
+  e_hip_ip_demographic_index %>% 
+    mutate(year = year(Admission_Date),
+           month = months(Admission_Date), 
+           week_number = isoweek(Admission_Date)) %>% 
+    group_by(year, week_number, demographic_var) %>% 
+    summarise(weekly_admissions = sum(Admission_count)) %>% 
+    ungroup()
+  
+  sub_data_wide <-
+    sub_data %>% 
+    filter(year == 2020) %>% 
+    rename(n_2020 = weekly_admissions) %>% 
+    select(-year) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2018) %>% 
+                select(-year) %>% 
+                rename(n_2018 = weekly_admissions), by = c("week_number", 'demographic_var'), keep = FALSE) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2019) %>% 
+                select(-year) %>% 
+                rename(n_2019 = weekly_admissions), by = c("week_number", 'demographic_var'), keep = FALSE) %>% 
+    group_by(week_number, demographic_var) %>% 
+    mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+    mutate(def = Avg1819 - n_2020) %>% 
+    mutate(PC_def = case_when(
+      week_number < 13 ~ 0,
+      week_number >= 13 ~ Avg1819 - n_2020)) %>%  # Additional variable to start deficit from lockdown start
+    ungroup() 
+  
+  sub_data_wide
+}
+
+
+# Total Admission deficit by region - Table 
+e_hip_ip_total_deficit_region <-
+  e_get_admission_deficit(nhser20nm) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2))
+
+# Cumulative admission deficit (from lockdown 1) 
+e_weekly_cum_def_by_region <-
+e_get_admission_deficit(nhser20nm) %>% 
+  group_by(demographic_var) %>% 
+  mutate(cum_def = cumsum(PC_def)) %>% 
+  pivot_longer(cols = c(-week_number, -demographic_var),
+               names_to = "trend", 
+               values_to = "count") %>% 
+  filter(trend == "cum_def") 
+
+# Deprivation
+e_hip_ip_def_deprivation <-
+e_get_admission_deficit(IMD_Quintile) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2))  
+
+e_hip_ip_def_deprivation_change <-
+e_get_admission_deficit(IMD_Quintile) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_2020 = sum(n_2020),
+            sum_1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(prop_2020 = round(sum_2020/sum(sum_2020)*100,2),
+         prop_1819 = round(sum_1819/sum(sum_1819)*100,2),
+         prop_change = prop_2020 - prop_1819) 
+
+# Broad ethnicity
+e_hip_ip_def_ethnicity_broad <-
+e_get_admission_deficit(Ethnicity_broad) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) 
+
+# Ethnicity
+e_hip_ip_def_ethnicity <-
+e_get_admission_deficit(Ethnic_Category_Desc) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100),2) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  filter(def_prop > 0) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) 
+
+e_hip_ip_def_ethnicity_prop_change <-
+e_get_admission_deficit(Ethnic_Category_Desc) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_2020 = sum(n_2020),
+            sum_1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(prop_2020 = round(sum_2020/sum(sum_2020)*100,2),
+         prop_1819 = round(sum_1819/sum(sum_1819)*100,2),
+         prop_change = round(prop_2020 - prop_1819),2) %>%
+  mutate(demographic_var = fct_reorder(demographic_var, prop_change)) 
+
+# Age range
+e_hip_ip_def_age_range <-
+e_get_admission_deficit(Age_range) %>% 
+  drop_na(demographic_var) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  filter(def_prop > 0) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) 
+
+
+## E 3.3. Comparing admissions by demographic and regions ####
+# Function: get admission count and deficit by demographic and region
+e_get_admission_deficit_mult <- function(demographic_var1, demographic_var2) {
+  
+  e_hip_ip_demographic_index <- 
+    e_hip_ip_demographic_index %>%
+    mutate(demographic_var1 = {{demographic_var1}},
+           demographic_var2 = {{demographic_var2}})
+  
+  sub_data <-
+    e_hip_ip_demographic_index %>% 
+    mutate(year = year(Admission_Date),
+           month = months(Admission_Date), 
+           week_number = isoweek(Admission_Date)) %>% 
+    group_by(year, week_number, demographic_var1, demographic_var2) %>% 
+    summarise(weekly_admissions = sum(Admission_count)) %>% 
+    ungroup()
+  
+  sub_data_wide <-
+    sub_data %>% 
+    filter(year == 2020) %>% 
+    rename(n_2020 = weekly_admissions) %>% 
+    select(-year) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2018) %>% 
+                select(-year) %>% 
+                rename(n_2018 = weekly_admissions), by = c("week_number", "demographic_var1", "demographic_var2"), keep = FALSE) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2019) %>% 
+                select(-year) %>% 
+                rename(n_2019 = weekly_admissions), by = c("week_number", "demographic_var1", "demographic_var2"), keep = FALSE) %>% 
+    group_by(week_number, demographic_var1, demographic_var2) %>% 
+    mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+    mutate(def = Avg1819 - n_2020) %>% 
+    mutate(PC_def = case_when(
+      week_number < 13 ~ 0,
+      week_number >= 13 ~ Avg1819 - n_2020)) %>%  # Additional variable to start deficit from lockdown start
+    
+    ungroup() 
+  
+  sub_data_wide 
+}
+
+# NHS region x ethincity - change in prop
+e_deficit_nhsr_ethnicity_prop_change <-
+e_get_admission_deficit_mult(nhser20nm, Ethnicity_broad) %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_n_2020 = sum(n_2020, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(prop_2020 = round(sum_n_2020/sum(sum_n_2020)*100,2),
+         prop_1819 = round(sum_Avg1819/sum(sum_Avg1819)*100,2),
+         prop_change = round(prop_2020 - prop_1819,2))  # 2020-Avg201819
+
+# NHSE region x Deprivation
+e_hip_ip_nhserXdeprivation <-
+e_get_admission_deficit_mult(nhser20nm, IMD_Quintile) %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+          sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  filter(def_prop > 0) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) %>%
+  arrange(demographic_var1, demographic_var2)
+
+
+# Deprivation x Broad ethnicity
+e_hip_ip_def_deprivationXEthnicity_broad <-
+e_get_admission_deficit_mult(IMD_Quintile, Ethnicity_broad) %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  mutate(sum_def_adj = case_when(sum_def >= 0 ~ sum_def,
+                                 sum_def < 0 ~ -sum_def )) %>% # Switch out the negative def to positive to calcuate CI
+  group_by(demographic_var1, demographic_var2) %>% 
+  #filter(def_prop > 0) %>% 
+  mutate(LCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) %>%
+  mutate(LCI = case_when(sum_def >= 0 ~ LCI, sum_def < 0 ~ -LCI),
+         UCI = case_when(sum_def >= 0 ~ UCI, sum_def < 0 ~ -UCI)) %>%  # Return CI's to negative where the def was negative
+  arrange(demographic_var2, demographic_var1)
+
+# Deprivation x Ethnicity - Asian specific 
+e_hip_ip_def_deprivationXEthnicity_broad_Asain <-
+e_get_admission_deficit_mult(IMD_Quintile, Ethnic_Category_Desc ) %>% 
+  left_join(c_ethnicity_lookup %>% 
+              select(-Ethnic_Category), by = c("demographic_var2" = "Ethnic_Category_Desc")) %>% 
+  filter(Ethnicity_broad == "Asian") %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  mutate(sum_def_adj = case_when(sum_def >= 0 ~ sum_def,
+                                 sum_def < 0 ~ -sum_def )) %>% # Switch out the negative def to positive to calcuate CI
+  group_by(demographic_var1, demographic_var2) %>% 
+  #filter(def_prop > 0) %>% 
+  mutate(LCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) %>%
+  mutate(LCI = case_when(sum_def >= 0 ~ LCI, sum_def < 0 ~ -LCI),
+         UCI = case_when(sum_def >= 0 ~ UCI, sum_def < 0 ~ -UCI))
+
+
+
+# Deprivation X ethnicity - prop change
+e_hip_ip_def_deprivationXEthnicity_broad_change_prop <-
+e_get_admission_deficit_mult(IMD_Quintile, Ethnicity_broad) %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_n_2020 = sum(n_2020, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(prop_2020 = round(sum_n_2020/sum(sum_n_2020)*100,2),
+         prop_1819 = round(sum_Avg1819/sum(sum_Avg1819)*100,2),
+         prop_change = round(prop_2020 - prop_1819,2)) 
+
+# Deprivation x Age
+e_hip_ip_def_deprivation_age <-
+e_get_admission_deficit_mult(IMD_Quintile, Age_range) %>% 
+  filter(demographic_var2 != "100+") %>% 
+  drop_na(demographic_var1, demographic_var2) %>% 
+  group_by(demographic_var1, demographic_var2) %>% 
+  summarise(sum_def = sum(PC_def, na.rm = TRUE)) %>% 
+  left_join(
+    e_get_admission_deficit_mult(IMD_Quintile, Age_range) %>% 
+      group_by(demographic_var1, demographic_var2) %>% 
+      summarise(sum_n = sum(Avg1819, na.rm = TRUE)), 
+    by = c("demographic_var1", "demographic_var2")) %>% 
+  mutate(proportion = round(sum_def/sum_n*100,2)) %>% 
+  mutate(sum_def_adj = case_when(sum_def >= 0 ~ sum_def,
+                                 sum_def < 0 ~ -sum_def )) %>% # Switch out the negative def to positive to calcuate CI
+  group_by(demographic_var1, demographic_var2) %>% 
+  mutate(LCI = round(add4ci(x = sum_def_adj, n = sum_n,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def_adj, n = sum_n,0.95)$conf.int[2]*100,2)) %>%
+  mutate(LCI = case_when(sum_def >= 0 ~ LCI, sum_def < 0 ~ -LCI),
+         UCI = case_when(sum_def >= 0 ~ UCI, sum_def < 0 ~ -UCI)) %>%  # Return CI's to negative where the def was negative
+  arrange(demographic_var2, demographic_var1) 
+
+## E.4. Emergency admissions for hip replacement procedures ####
+a.ip_hip_unplanned <-
+  a.ip_hip_unplanned %>% 
+  mutate(Age_range = case_when(Age_at_Start_of_Episode_SUS >= 0 & Age_at_Start_of_Episode_SUS < 20 ~ "0-19",
+                               (Age_at_Start_of_Episode_SUS >= 20 & Age_at_Start_of_Episode_SUS <40) ~  "20-39",
+                               (Age_at_Start_of_Episode_SUS >= 40 & Age_at_Start_of_Episode_SUS <60) ~  "40-59",
+                               (Age_at_Start_of_Episode_SUS >= 60 & Age_at_Start_of_Episode_SUS <80) ~  "60-79",
+                               (Age_at_Start_of_Episode_SUS >= 80 & Age_at_Start_of_Episode_SUS <100) ~ "80-99",
+                               Age_at_Start_of_Episode_SUS >= 100 ~ "100+")) %>% 
+  mutate(Age_range = factor(Age_range, levels = c("0-19", 
+                                                  "20-39",
+                                                  "40-59",
+                                                  "60-79",
+                                                  "80-99", 
+                                                  "100+"))) %>% 
+  left_join(a_lsoa_to_stp, by = c("Der_Postcode_LSOA_2011_Code" = "lsoa11cd")) %>% 
+  left_join(a_stp_to_nhsr %>% 
+              select(stp20cd, nhser20cd, nhser20nm) %>% 
+              distinct(), 
+            by = c("stp20cd"))
+
+e_hip_ip_demo_index_unplanned <-
+  a.ip_hip_unplanned %>% 
+  #Ethnicity
+  mutate(
+    Ethnic_Group = case_when(Ethnic_Group %in% c("99", "NA") ~ Ethnic_Group,
+                             TRUE ~ substr(Ethnic_Group,1,1)
+    )) %>% # Shorten Ethnic group to first character to clean data (except when coded as 99 or NA)
+  mutate(
+    Ethnic_Group = case_when(is.na(Ethnic_Group) ~ "99",
+                             TRUE ~ Ethnic_Group)) %>% # Replace NA's with "NA" to left_join to "Not Known"
+  left_join(c_ethnicity_lookup, by = c("Ethnic_Group" = "Ethnic_Category")) %>% 
+  # Deprivation 
+  left_join(select(c_lsoa_imd, LSOA_Code, IMD_Score, IMD_Rank, IMD_Decile), by = c("Der_Postcode_LSOA_2011_Code" = "LSOA_Code")) %>% 
+  mutate(IMD_Quintile = case_when(IMD_Decile %in% c(1,2) ~ 1,
+                                  IMD_Decile %in% c(3,4) ~ 2,
+                                  IMD_Decile %in% c(5,6) ~ 3,
+                                  IMD_Decile %in% c(7,8) ~ 4,
+                                  IMD_Decile %in% c(9,10) ~ 5,
+                                  TRUE ~ 99)) %>% 
+  # Activity count by demographic and region
+  mutate(Admission_Date = as.Date(Admission_Date)) %>% 
+  group_by(Admission_Date, nhser20nm, Age_range, Sex, Ethnic_Category_Desc, Ethnicity_broad, IMD_Quintile) %>% 
+  summarise(Admission_count = n_distinct(APCS_Ident)) %>% 
+  ungroup()
+
+e_hip_ip_unplanned_week_number <-
+  e_hip_ip_demo_index_unplanned %>% 
+  mutate(Admission_week = floor_date(Admission_Date, unit = "week")) %>% 
+  group_by(Admission_week) %>% 
+  summarise(Admissions = sum(Admission_count)) %>% 
+  mutate(year = year(Admission_week),
+         #month = months(Admission_Date), 
+         week_number = isoweek(Admission_week)) %>% 
+  group_by(year, week_number) %>% 
+  #summarise(weekly_admissions = sum(Admission_count)) %>% 
+  ungroup()
+
+# Annual trends
+e_hip_ip_week_number_wide <-
+  e_hip_ip_unplanned_week_number %>% 
+  filter(year == 2020) %>% 
+  rename(n_2020 = Admissions) %>% 
+  select(-year, -Admission_week) %>% 
+  left_join(e_hip_ip_unplanned_week_number %>% 
+              filter(year == 2018) %>% 
+              select(-year, -Admission_week) %>% 
+              rename(n_2018 = Admissions), by = c("week_number"), keep = FALSE) %>% 
+  left_join(e_hip_ip_unplanned_week_number %>% 
+              filter(year == 2019) %>% 
+              select(-year, -Admission_week) %>% 
+              rename(n_2019 = Admissions), by = c("week_number"), keep = FALSE) %>% 
+  group_by(week_number) %>% 
+  mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+  ungroup() %>% 
+  mutate(def = Avg1819 - n_2020)
+
+e_hip_total_admission_def_unplanned <-
+  e_hip_ip_week_number_wide %>% 
+  select(def) %>% 
+  sum(na.rm = TRUE) 
+
+# Sub-group proportions
+e_get_admission_deficit_hip_unplanned <- function(demographic_var) {
+  
+  e_hip_ip_demo_index_unplanned <- 
+    e_hip_ip_demo_index_unplanned %>%
+    mutate(demographic_var = {{demographic_var}})
+  
+  sub_data <-
+    e_hip_ip_demo_index_unplanned %>% 
+    mutate(year = year(Admission_Date),
+           month = months(Admission_Date), 
+           week_number = isoweek(Admission_Date)) %>% 
+    group_by(year, week_number, demographic_var) %>% 
+    summarise(weekly_admissions = sum(Admission_count)) %>% 
+    ungroup()
+  
+  sub_data_wide <-
+    sub_data %>% 
+    filter(year == 2020) %>% 
+    rename(n_2020 = weekly_admissions) %>% 
+    select(-year) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2018) %>% 
+                select(-year) %>% 
+                rename(n_2018 = weekly_admissions), by = c("week_number", 'demographic_var'), keep = FALSE) %>% 
+    left_join(sub_data %>% 
+                filter(year == 2019) %>% 
+                select(-year) %>% 
+                rename(n_2019 = weekly_admissions), by = c("week_number", 'demographic_var'), keep = FALSE) %>% 
+    group_by(week_number, demographic_var) %>% 
+    mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+    mutate(def = Avg1819 - n_2020) %>% 
+    mutate(PC_def = case_when(
+      week_number < 13 ~ 0,
+      week_number >= 13 ~ Avg1819 - n_2020)) %>%  # Additional variable to start deficit from lockdown start
+    ungroup() 
+  
+  sub_data_wide
+}
+
+
+# Cumulative deficit by region 
+e_hip_unplanned_def_region <-
+e_get_admission_deficit_hip_unplanned(nhser20nm) %>% 
+  group_by(demographic_var) %>% 
+  mutate(cum_def = cumsum(PC_def)) %>% 
+  pivot_longer(cols = c(-week_number, -demographic_var),
+               names_to = "trend", 
+               values_to = "count") %>% 
+  filter(trend == "cum_def") 
+
+e_hip_ip_unplanned_def_region <-
+e_get_admission_deficit_hip_unplanned(nhser20nm) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) 
+
+e_hip_ip_unplanned_def_deprivation <-
+  e_get_admission_deficit_hip_unplanned(IMD_Quintile) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>% 
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) 
+
+e_hip_ip_unplanned_def_ethnicity <-
+  e_get_admission_deficit_hip_unplanned(Ethnic_Category_Desc) %>% 
+  group_by(demographic_var) %>% 
+  summarise(sum_def = sum(def, na.rm = TRUE),
+            sum_Avg1819 = sum(Avg1819, na.rm = TRUE)) %>% 
+  mutate(def_prop = round(sum_def/sum_Avg1819*100,2)) %>% 
+  arrange(desc(def_prop)) %>%  
+  mutate(sum_def_adj = case_when(sum_def >= 0 ~ sum_def,
+                                 sum_def < 0 ~ -sum_def
+                                 )) %>% # Switch out the negative def to positive to calcuate CI
+  group_by(demographic_var) %>% 
+  mutate(LCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[1]*100,2),
+         UCI = round(add4ci(x = sum_def_adj, n = sum_Avg1819,0.95)$conf.int[2]*100,2)) %>% 
+  mutate(LCI = case_when(sum_def >= 0 ~ LCI, sum_def < 0 ~ -LCI),
+         UCI = case_when(sum_def >= 0 ~ UCI, sum_def < 0 ~ -UCI) 
+         ) 
+
+
+```
+
+# Data tables
+
+## National time series 
+
+Fig. 1.1 - Inpatient hip replacement admissions 
+```{r Fig. 1, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(b_hip_ip_daily)
+```
+<br>
+
+Fig.1.2 - Hip replacement procedures and related activity
+``` {r Fig. 1.2, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(b_hip_all_month_wide)
+```
+<br>
+
+## Cohort characteristics 
+
+### Age
+
+Fig. 2.1 - Daily proportion of hip procedures performed by age range
+``` {r Fig. 2.1, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_age)
+```
+<br>
+
+Fig. 2.2.1 - Weekly proportion of elective hip procedures by age range
+``` {r Fig. 2.2.1, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_age_stacked_data)
+```
+<br>
+
+Fig. 2.2.2, 2.4.2 & 2.8.2 - Weekly count of elective hip procedures 
+``` {r Fig. 2.2.2, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_admission_volume)
+```
+<br>
+
+### Deprivation
+
+Fig. 2.3 & 2.4.1 - Weekly proportion of hip procedures performed by IMD deprivation quintile
+``` {r Fig. 2.3, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_imd)
+```
+<br>
+
+Fig. 2.5 - Weekly proportion of elective hip procedures performed by age range and deprivation
+``` {r Fig. 2.4.3, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_imd_age_wk)
+```
+<br>
+
+### Ethnicity
+
+Fig. 2.7 & 2.8.1 - Weekly proportion of hip procedures performed by broad ethnicity
+``` {r Fig. 2.7, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_ethnicity_broad)
+```
+<br>
+
+
+Fig. 2.9 - Weekly proportion of hip procedures performed by ethnicity
+``` {r Fig. 2.9, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(c_ip_hip_admission_volume)
+```
+<br>
+
+## Deficit in planned admissions
+
+Note: "PC_def" denotes the post-COVID deficit. Difference between 2020 trend and reference starting from the first national lockdown.
+
+### National and regional
+
+Fig 3.1 - Weekly elective inpatient hip procedures, 2018-20
+``` {r Fig. 3.1, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_week_number_wide)
+```
+<br>
+Fig 3.2 - Weekly elective inpatient hip procedures by NHSE region, 2018-20
+``` {r Fig. 3.2, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_get_admission_deficit(nhser20nm))
+```
+<br>
+Fig. 3.3 - Cumulative admission deficit for hip replacement procedures by NHSE region
+``` {r Fig. 3.3, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_weekly_cum_def_by_region %>% 
+            rename(NHSE_Region = demographic_var))
+```
+<br>
+Fig. 3.4 - Proportional admission deficit by region
+```{r 3.4, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_total_deficit_region %>% 
+  rename(Region = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br> 
+
+### Demographic deficits
+
+#### Age
+
+Fig. 3.5 - Proportional admission deficit by age
+```{r 3.5, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+e_hip_ip_def_age_range %>% 
+  rename(Age_range = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop)
+)
+```
+<br>
+
+#### Ethnicity
+
+Fig. 3.6 - Proportional admission deficit by ethnicity
+```{r 3.6, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+e_hip_ip_def_ethnicity %>% 
+  rename(Ethnicity = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop)
+)
+```
+<br>
+Fig. 3.7 - Change in proportion of elective hip replacements by ethnicity
+```{r 3.7, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+e_hip_ip_def_ethnicity_prop_change %>% 
+  rename(Ethnicity = demographic_var))
+```
+<br>
+Fig. 3.8 - Change in proportion of elective hip replacements by ethnicity and NHSE region
+```{r 3.8, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_deficit_nhsr_ethnicity_prop_change)
+```
+<br>
+
+#### Deprivation
+
+Fig. 3.9 - Proportional admission deficit by deprivation quintile
+```{r 3.9, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_def_deprivation %>% 
+      rename(IMD_Quintile = demographic_var,
+             Deficit = sum_def, 
+             Avg_annual_admissions = sum_Avg1819, 
+             Deficit_proportion = def_prop))
+```
+<br>
+Fig. 3.10 - Change in proportion of elective hip replacements by IMD quintile 
+```{r 3.10, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_def_deprivation_change %>% 
+      rename(IMD_Quintile = demographic_var))
+```
+<br>
+Fig. 3.11 - Proportional deficit by IMD quintile and region 
+``` {r 3.11, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_nhserXdeprivation %>% 
+    rename(Region = demographic_var1,
+           IMD_Quintile = demographic_var2,
+           Deficit = sum_def, 
+           Avg_annual_admissions = sum_Avg1819, 
+           Deficit_proportion = def_prop))
+```
+<br>
+Fig. 3.12 - Proportional deficit by IMD quintile and broad ethnicity 
+``` {r 3.12, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_def_deprivationXEthnicity_broad %>% 
+  select(-sum_def_adj) %>%
+  rename(IMD_Quintile = demographic_var1,
+         Ethnicity  = demographic_var2,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br>
+Fig. 3.13 - Proportional deficit by IMD quintile and ethnicity - Asian specific
+``` {r 3.13, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_def_deprivationXEthnicity_broad_Asain %>%
+  rename(IMD_Quintile = demographic_var1,
+         Ethnicity  = demographic_var2,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br>
+Fig. 3.14 - Proportional deficit by IMD quintile and ethnicity - Asian specific
+``` {r 3.14, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_def_deprivationXEthnicity_broad_change_prop %>%
+  rename(IMD_Quintile = demographic_var1,
+         Ethnicity  = demographic_var2))
+```
+<br> 
+Fig. 3.15 - Proportional deficit by IMD and Age range
+``` {r 3.15, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+  e_hip_ip_def_deprivation_age %>%
+    rename(IMD_Quintile = demographic_var1,
+         Age_range  = demographic_var2,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_n, 
+         Deficit_proportion = proportion) %>% 
+    select(-sum_def_adj)
+  )
+
+```
+
+## Deficit in unplanned admissions
+
+### National and regional 
+
+Fig 4.1 - Weekly admissions for unplanned hip replacements
+``` {r 4.1, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+  e_hip_ip_demo_index_unplanned %>% 
+  mutate(Admission_week = floor_date(Admission_Date, unit = "week")) %>% 
+  group_by(Admission_week) %>% 
+  summarise(Admissions = sum(Admission_count)) %>% 
+  filter(Admission_week > "2018-01-01" &  Admission_week < "2020-12-31")
+)
+```
+<br>
+Fig 4.2 & 4.3 - Annual trends in weekly admissions for unplanned hip replacements
+``` {r 4.2, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_week_number_wide)
+```
+<br>
+Fig 4.4 - Unplanned hip replacement cumulative deficit by region
+``` {r 4.4, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_unplanned_def_region)
+```
+<br>
+Fig 4.5 - Proportional deficit in unplanned hip replacements by region
+``` {r 4.5, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+  e_hip_ip_unplanned_def_region %>% 
+  rename(Region = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br>
+Fig 4.6 - Planned and unplanned admission deficit scatter plot by region
+``` {r 4.6, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+  e_hip_ip_total_deficit_region %>% 
+  select(demographic_var, def_prop) %>% 
+  rename(planned_def = def_prop) %>% 
+  left_join(e_hip_ip_unplanned_def_region %>% 
+              select(demographic_var, def_prop) %>% 
+              rename(unplanned_def = def_prop), 
+            by = c("demographic_var")) %>%
+  ungroup() %>% 
+    rename(Region = demographic_var)
+)
+
+```
+
+### Demographic deficits
+
+#### Deprivation
+
+<br> 
+Fig. 4.7 - Proportional deficit in unplanned hip replacements by deprivation
+``` {r 4.7, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_unplanned_def_deprivation %>% 
+    rename(IMD_Quintile = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br>
+Fig. 4.8 - Planned and unplanned admission deficit scatter plot by deprivation quintile
+``` {r 4.8, warning = FALSE, message = FALSE, echo = FALSE }
+create_dt(
+e_hip_ip_def_deprivation %>% 
+  select(demographic_var, def_prop) %>% 
+  rename(planned_def = def_prop) %>% 
+  left_join(e_hip_ip_unplanned_def_deprivation %>% 
+              select(demographic_var, def_prop) %>% 
+              rename(unplanned_def = def_prop), 
+            by = c("demographic_var")) %>%
+  ungroup() %>% 
+  rename(IMD_Quintile = demographic_var)
+)
+
+```
+
+#### Ethnicity
+
+<br>
+Fig. 4.9 - Proportional deficit in unplanned hip replacements by Ethnicity
+``` {r 4.9, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(e_hip_ip_unplanned_def_ethnicity %>%
+  rename(Ethnicity = demographic_var,
+         Deficit = sum_def, 
+         Avg_annual_admissions = sum_Avg1819, 
+         Deficit_proportion = def_prop))
+```
+<br>
+Fig. 4.10 - Planned and unplanned admission deficit scatter plot by Ethnicity
+``` {r 4.10, warning = FALSE, message = FALSE, echo = FALSE}
+create_dt(
+  e_hip_ip_def_ethnicity %>% 
+  mutate(conf = UCI - LCI) %>% 
+  select(demographic_var, def_prop, conf) %>% 
+  rename(planned_def = def_prop) %>% 
+  left_join(e_hip_ip_unplanned_def_ethnicity %>% 
+              mutate(conf = UCI - LCI) %>% 
+              select(demographic_var, def_prop, conf) %>% 
+              rename(unplanned_def = def_prop), 
+            by = c("demographic_var")) %>%
+  mutate(confidence = round(mean(conf.x, conf.y),2)) %>% 
+  ungroup() %>%
+  mutate(conf_tertile = 
+           case_when(
+             confidence < quantile(confidence, probs = 0.33) ~ "High",
+             confidence > quantile(confidence, probs = 0.33) & confidence < quantile(confidence, probs = 0.66) ~ "Medium",
+             confidence > quantile(confidence, probs = 0.66) ~ "Low"
+           ))  %>% 
+  mutate(conf_tertile = factor(conf_tertile, levels = c("Low", "Medium", "High")))
+)
+```
+<br>
+
+
+

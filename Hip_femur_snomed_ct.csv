@@ -1,0 +1,112 @@
+ID,Description,chapter
+71620000,Fracture of femur,Fracture of femur
+704067000,Stress fracture of femur,Stress fractures to femur
+704061004,Stress fracture of lateral condyle of femur,Stress fractures to femur
+704063001,Stress fracture of neck of femur,Stress fractures to femur
+704068005,Stress fracture of shaft of femur,Stress fractures to femur
+409667007,Pathological fracture of femur,Pathological fractures to femur
+704330001,Pathological fracture of femur due to osteoporosis,Pathological fractures to femur
+704253003,Pathological fracture of femur due to neoplastic disease,Pathological fractures to femur
+704171000,Pathological fracture of proximal end of femur,Pathological fractures to femur
+409666003,Pathological fracture of neck of femur,Pathological fractures to femur
+431031001,Pathological fracture of neck of femur associated with osteoporosis,Pathological fractures to femur
+704291003,Pathological fracture of femur due to secondary osteoporosis,Pathological fractures to femur
+704249000,Pathological fracture of proximal femur due to neoplastic disease,Pathological fractures to femur
+704334005,Pathological fracture of proximal femur due to osteoporosis,Pathological fractures to femur
+28576007,Open fracture of femur,Open fractures of femur
+361119006,Open fracture of neck of femur,Open fractures of femur
+208558006,"Open fracture proximal femur, subtrochanteric",Open fractures of femur
+26938002,Open intertrochanteric fracture,Open fractures of femur
+6628008,Open fracture of shaft of femur,Open fractures of femur
+705093001,Open fracture of apophysis of femur,Open fractures of femur
+25415003,Closed fracture of femur,Closed fractures of femur
+26442006,Closed fracture of shaft of femur,Closed fractures of femur
+705090003,Closed fracture of apophysis of femur,Closed fractures of femur
+62125005,Closed fracture of epiphysis of femur,Closed fractures of femur
+359820003,Closed fracture of neck of femur,Closed fractures of femur
+208551000,"Closed fracture proximal femur, subtrochanteric",Closed fractures of femur
+89820008,Closed intertrochanteric fracture,Closed fractures of femur
+263225007,Fracture of proximal end of femur,Fracture of proximal end of femur
+263229001,Subtrochanteric fracture of femur,Fracture of proximal end of femur
+788943004,Fracture of proximal epiphysis of femur,Fracture of proximal end of femur
+445875009,Fracture of trochanter of femur,Fracture of proximal end of femur
+428112005,Malunion of fracture of proximal femur,Fracture of proximal end of femur
+5913000,Fracture of neck of femur,Fracture of proximal end of femur
+127287001,Intertrochanteric fracture,Fracture of proximal end of femur
+208731002,Multiple fractures of femur,Multiple fractures of femur
+69830008,Multiple closed fractures of lower end of femur,Multiple fractures of femur
+45455009,Multiple open fractures of lower end of femur,Multiple fractures of femur
+125600009,Injury of hip region,
+36127009,Fracture of pubis,Fracture of pubis
+441499007,Stress fracture of pubis,Fracture of pubis
+263067005,Fracture dislocation of symphysis pubis,Fracture of pubis
+71220005,Open fracture of pubis,Fracture of pubis
+722649004,Fracture of pubis without disruption of pelvic ring,Fracture of pubis
+13695006,Fracture of pubic rami,Fracture of pubis
+208164008,Closed fracture pubis,Fracture of pubis
+208174006,"Open fracture pelvis, multiple pubic rami - unstable",Fracture of pubis
+208172005,"Open fracture pelvis, single pubic ramus",Fracture of pubis
+208173000,"Open fracture pelvis, multiple pubic rami - stable",Fracture of pubis
+17883008,Sprain of hip,Sprain of hip
+209506006,Ischiocapsular sprain,Sprain of hip
+90654004,Sprain of iliofemoral ligament,Sprain of hip
+430906009,Strain of rectus femoris muscle,Sprain of hip
+208146001,"Closed fracture acetabulum, anterior lip alone",Closed fracture acetabulum
+208147005,"Closed fracture acetabulum, posterior lip alone",Closed fracture acetabulum
+11730002,Crushing injury of hip,Crushing injury of hip
+211593003,"Open crush injury, hip",Crushing injury of hip
+211589009,Crush injury of hip and thigh,Crushing injury of hip
+211592008,"Closed crush injury, hip",Crushing injury of hip
+700097003,Fracture of bone of hip region,Fracture of bone of hip region
+359817006,Closed fracture of hip,Fracture of bone of hip region
+361118003,Open fracture of hip,Fracture of bone of hip region
+64455005,Fracture of acetabulum,Fracture of bone of hip region
+209335002,Closed fracture dislocation of hip joint,Fracture of bone of hip region
+208523009,"Closed fracture proximal femur, transepiphyseal",Fracture of bone of hip region
+33118001,Closed fracture of acetabulum,Fracture of bone of hip region
+445899009,Closed fracture of trochanter of femur,Fracture of bone of hip region
+208526001,Closed fracture of head of femur,Fracture of bone of hip region
+726221001,Strain of tendon of muscle of hip,Injury of tendon of muscle of hip
+726216004,Injury of muscle of hip,Injury of muscle of hip
+726219006,Strain of muscle of hip,Injury of muscle of hip
+726222008,Laceration of muscle of hip,Injury of muscle of hip
+125658009,Open wound of hip region,Open wound of hip region
+46272008,Open fracture of innominate bone,Open wound of hip region
+77598002,Open fracture of acetabulum,Open wound of hip region
+283533001,Puncture wound of hip,Open wound of hip region
+84920009,Open dislocation of hip,Open wound of hip region
+209336001,Open fracture dislocation of hip joint,Open wound of hip region
+208908007,Open traumatic subluxation hip joint,Open wound of hip region
+208902008,"Open traumatic dislocation hip joint, anterior",Open wound of hip region
+208900000,"Open traumatic dislocation hip joint, posterior",Open wound of hip region
+5353008,Open wound of hip AND thigh without complication,Open wound of hip region
+283432008,Cut of hip,Open wound of hip region
+733274009,Multiple open wounds of hip,Open wound of hip region
+208155003,"Open fracture acetabulum, anterior lip alone",Open wound of hip region
+283384001,Laceration of hip,Open wound of hip region
+211330003,"Abrasion, hip",Open wound of hip region
+211337000,"Abrasion of hip, infected",Open wound of hip region
+210669008,Open wound of hip with tendon involvement,Open wound of hip region
+726224009,Laceration of tendon of muscle of hip,Open wound of hip region
+5801006,Open wound of hip AND thigh with tendon involvement,Open wound of hip region
+44801007,Contusion of hip,Contusion of hip
+211519000,"Contusion, hip and thigh",Contusion of hip
+7687006,Fracture of ilium,Fracture of ilium
+17616007,Closed fracture of ilium,Fracture of ilium
+271963003,Fracture of iliac wing,Fracture of ilium
+60214001,Open fracture of ilium,Fracture of ilium
+263216001,Vertical fracture of ilium,Fracture of ilium
+208197009,Open vertical fracture of ilium,Fracture of ilium
+208185008,Closed vertical fracture of ilium,Fracture of ilium
+722706005,Fracture of ilium without disruption of pelvic ring,Fracture of ilium
+263217005,Fracture of iliac crest,Fracture of ilium
+208195001,"Open fracture pelvis, iliac wing",Fracture of ilium
+263220002,Fracture of ischium,Fracture of ischium
+36417005,Closed fracture of ischium,Fracture of ischium
+722650004,Fracture of ischium without disruption of pelvic ring,Fracture of ischium
+76911006,Open fracture of ischium,Fracture of ischium
+263221003,Fracture of ischial tuberosity,Fracture of ischium
+208181004,"Closed fracture pelvis, ischial tuberosity",Fracture of ischium
+208192003,"Open fracture pelvis, ischial tuberosity",Fracture of ischium
+726214001,Injury of bursa of hip,Injury of bursa of hip
+10597006,Disorder of bursa,Injury of bursa of hip

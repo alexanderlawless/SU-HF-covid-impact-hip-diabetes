@@ -1,0 +1,70 @@
+ID,Description,Chapter,diabetes_type
+237620003,Abnormal metabolic state due to diabetes mellitus,Abnormal metabolic state due to diabetes mellitus,Not stated
+237621004,Severe hyperglycemia due to diabetes mellitus,Hyperglycemia,Not stated
+398140007,Somogyi phenomenon,Hyperglycemia,Not stated
+822995009,Hyperglycemia due to diabetes mellitus,Hyperglycemia,Not stated
+3.68E+14,Hyperglycemia due to type 1 diabetes mellitus,Hyperglycemia,1
+3.68E+14,Hyperglycemia due to type 2 diabetes mellitus,Hyperglycemia,2
+441656006,Hyperglycemic crisis due to diabetes mellitus,Hyperglycemia,Not stated
+395204000,Hyperosmolar non-ketotic state due to type 2 diabetes mellitus,Hyperglycemia,2
+735539005,Metabolic acidosis due to diabetes mellitus,Diabetic ketoacidosis,Not stated
+420422005,Diabetic ketoacidosis,Diabetic ketoacidosis,Not stated
+721283000,Acidosis due to type 1 diabetes mellitus,Diabetic ketoacidosis,1
+721284006,Acidosis due to type 2 diabetes mellitus,Diabetic ketoacidosis,2
+735538002,Lactic acidosis due to diabetes mellitus,Diabetic ketoacidosis,Not stated
+111556005,Diabetic ketoacidosis without coma,Diabetic ketoacidosis,Not stated
+26298008,Ketoacidotic coma due to diabetes mellitus,Diabetic ketoacidosis,Not stated
+190406000,Malnutrition-related diabetes mellitus with ketoacidosis,Diabetic ketoacidosis,Not stated
+420270002,Ketoacidosis due to type 1 diabetes mellitus,Diabetic ketoacidosis,1
+421750000,Ketoacidosis due to type 2 diabetes mellitus,Diabetic ketoacidosis,2
+421075007,Ketoacidotic coma due to type 1 diabetes mellitus,Diabetic ketoacidosis,1
+421847006,Ketoacidotic coma due to type 2 diabetes mellitus,Diabetic ketoacidosis,2
+1.57E+12,Mixed hyperlipidemia due to type 1 diabetes mellitus,Hyperlidemia,1
+7.01E+11,Mixed hyperlipidemia due to type 2 diabetes mellitus,Hyperlidemia,2
+1.38E+14,Hyperlipidemia due to type 1 diabetes mellitus,Hyperlidemia,1
+1.38E+14,Hyperlipidemia due to type 2 diabetes mellitus,Hyperlidemia,2
+3.67E+14,Hyperosmolarity due to drug induced diabetes mellitus,Hyperosmolarity,Not stated
+422126006,Hyperosmolar coma due to diabetes mellitus,Hyperosmolarity,Not stated
+3.69E+14,Hyperosmolarity due to type 1 diabetes mellitus,Hyperosmolarity,1
+428896009,Hyperosmolality due to uncontrolled type 1 diabetes mellitus,Hyperosmolarity,1
+190330002,Hyperosmolar coma due to type 1 diabetes mellitus,Hyperosmolarity,1
+190331003,Hyperosmolar coma due to type 2 diabetes mellitus,Hyperosmolarity,2
+3.69E+14,Hyperosmolar coma due to secondary diabetes mellitus,Hyperosmolarity,Not stated
+735537007,Hyperosmolar hyperglycemic coma due to diabetes mellitus without ketoacidosis,Hyperosmolarity,Not stated
+3.69E+14,Dyslipidemia due to type 1 diabetes mellitus,Dyslipidemia,1
+7.61E+11,Dyslipidemia due to type 2 diabetes mellitus,Dyslipidemia,2
+1.11E+14,Dyslipidemia with high density lipoprotein below reference range and triglyceride above reference range due to type 2 diabetes mellitus,Dyslipidemia,2
+420662003,Coma due to diabetes mellitus,Coma,Not stated
+421966007,Non-ketotic non-hyperosmolar coma due to diabetes mellitus,Coma,Not stated
+444780001,High glucose level in blood,Finding,Not stated
+166892002,Random blood sugar raised,Finding,Not stated
+68256003,Increased glucose level,Finding,Not stated
+762489000,Acute complication due to diabetes mellitus,General,Not stated
+193183000,Acute painful diabetic neuropathy,General,Not stated
+302866003,Hypoglycemia,Hypoglycemia,Not stated
+237630007,Hypoglycemic disorder,Hypoglycemia,Not stated
+237635002,Nocturnal hypoglycemia due to diabetes mellitus,Hypoglycemia,Not stated
+360546002,Hypoglycemic shock,Hypoglycemia,Not stated
+66095000,Mixed hypoglycemia,Hypoglycemia,Not stated
+20825002,Ketotic hypoglycemia,Hypoglycemia,Not stated
+68581004,Hypoglycemia of childhood,Hypoglycemia,Not stated
+237631006,Neuroglycopenia,Hypoglycemia,Not stated
+237633009,Hypoglycemia due to diabetes mellitus,Hypoglycemia,1
+237632004,Hypoglycemic event due to diabetes,Hypoglycemia,Not stated
+8.44E+13,Hypoglycemia due to type 1 diabetes mellitus,Hypoglycemia,1
+421437000,Hypoglycemic coma due to type 1 diabetes mellitus,Hypoglycemia,1
+1.21E+14,Hypoglycemic unawareness due to type 1 diabetes mellitus,Hypoglycemia,1
+421725003,Hypoglycemic coma due to diabetes mellitus,Hypoglycemia,Not stated
+719216001,Hypoglycemic coma due to type 2 diabetes mellitus,Hypoglycemia,2
+170766006,Loss of hypoglycemic warning due to diabetes mellitus,Hypoglycemia,Not stated
+1.20E+14,Hypoglycemia unawareness due to type 2 diabetes mellitus,Hypoglycemia,2
+80394007,Hyperglycemia (disorder),Hyperglycemia,Not stated
+46635009,Diabetes mellitus type 1 (disorder),General,1
+44054006,Diabetes mellitus type 2 (disorder),General,2
+14140009,Hyperkalemia (disorder),Hyperkalemia,Not stated
+89627008,Hyponatremia (disorder),Hyponatremia,Not stated
+43339004,Hypokalemia (disorder),Hypokalemia,Not stated
+310505005,Diabetic hyperosmolar non-ketotic state (disorder),Hyperosmolarity,Not stated
+66931009,Hypercalcemia (disorder),Hypercalcemia ,Not stated
+39355002,Hypernatremia (disorder),Hypernatremia,Not stated
+46635009,Diabetes mellitus type 1 (disorder),General,1
