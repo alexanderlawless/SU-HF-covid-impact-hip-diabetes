@@ -10,6 +10,7 @@ output:
     toc_collapsed: TRUE
     toc_depth: 4
     number_sections: TRUE
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
