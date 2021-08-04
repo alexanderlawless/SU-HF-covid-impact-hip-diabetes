@@ -970,6 +970,13 @@ e_hip_ip_week_number_wide %>%
   select(PC_def) %>% 
   sum(na.rm = TRUE)
 
+e_hip_ip_total_admission_def_cumulative <-
+e_hip_ip_week_number_wide %>% 
+  mutate(cum_def = cumsum(PC_def)) %>% 
+  filter(week_number == 52) %>% 
+  select(PC_def) %>%
+  sum(na.rm = TRUE) 
+
 ## E.3.2. Demographic index: Comparing 2020 to 18/19 mean by subgroups ####
 # Admission count by demographic subgroups  
 e_hip_ip_demographic_index <-
@@ -2508,7 +2515,7 @@ These figures will continue to rise until the deficit is reduced, that is we rec
 <br>
 
 - Literature derived [2] QALY impact of 1 week delay in hip replacement surgery: __*0.00062*__ 
-- Cumulative admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")` 
+- Total admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")`
 - Cumulative additional weeks waiting for hip replacement: `r paste(sum(f_waiting_times$cum_add_weeks_waiting), "weeks")`
 - QALYs lost by those waiting for hip procedures: `r paste(round(f_total_qaly_loss,1), "QALYS")`
 - Monetary value of QALYs lost by those waiting (year 1): `r paste0("£",round(f_total_qaly_loss_value,0))`

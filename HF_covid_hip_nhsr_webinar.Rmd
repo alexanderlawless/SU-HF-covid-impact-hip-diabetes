@@ -2576,7 +2576,7 @@ These figures will continue to rise until the deficit is reduced, that is we rec
 <br>
 
 - Literature derived [2] QALY impact of 1 week delay in hip replacement surgery: __*0.00062*__ 
-- Cumulative admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")` 
+- Total admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")` 
 - Cumulative additional weeks waiting for hip replacement: `r paste(sum(f_waiting_times$cum_add_weeks_waiting), "weeks")`
 - QALYs lost by those waiting for hip procedures: `r paste(round(f_total_qaly_loss,1), "QALYS")`
 - Monetary value of QALYs lost by those waiting (year 1): `r paste0("£",round(f_total_qaly_loss_value,0))`
