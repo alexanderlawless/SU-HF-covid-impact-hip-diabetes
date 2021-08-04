@@ -2180,6 +2180,25 @@ e_hip_ip_week_number %>%
   ungroup() %>% 
   mutate(def = Avg1819 - n_2020)
 
+e_hip_ip_week_number %>% 
+  filter(year == 2020) %>% 
+  rename(n_2020 = weekly_admissions) %>% 
+  select(-year) %>% 
+  left_join(e_hip_ip_week_number %>% 
+              filter(year == 2018) %>% 
+              select(-year) %>% 
+              rename(n_2018 = weekly_admissions), by = c("week_number"), keep = FALSE) %>% 
+  left_join(e_hip_ip_week_number %>% 
+              filter(year == 2019) %>% 
+              select(-year) %>% 
+              rename(n_2019 = weekly_admissions), by = c("week_number"), keep = FALSE) %>% 
+  group_by(week_number) %>% 
+  mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
+  ungroup() %>% 
+  mutate(def = Avg1819 - n_2020) %>% 
+  mutate(PC_def = case_when(
+    week_number < 13 ~ 0,
+    week_number >= 13 ~ Avg1819 - n_2020))
 
 # "#f9bf07", "#686f73", "#5881c1", "#ec6555"
 e_hip_ip_annual_trends <-
@@ -3246,6 +3265,70 @@ a.ip_hip %>%
 
 #write_csv(f_hip_ip_Age_Gender_profile, "hip_ip_Age_Gender_profile.csv")
 
+
+f_life_expectancy <-
+  read_csv("life_expectancy.csv")
+
+f_life_expectancy_discounted <-
+  read_csv("life_expectancy_discounted.csv") %>% 
+  clean_names()
+
+# Pull in LE and LE discounted
+f_hip_ip_Age_Gender_profile_LE <-
+  f_hip_ip_Age_Gender_profile %>% 
+  left_join(f_life_expectancy %>%
+              filter(Gender == "Male") %>% 
+              select(Age, ex), 
+            by = c("Age_at_Start_of_Episode_SUS" = "Age"), keep = FALSE) %>% 
+  rename(male_ex = ex) %>% 
+  left_join(f_life_expectancy %>%
+              filter(Gender == "Female") %>% 
+              select(Age, ex), 
+            by = c("Age_at_Start_of_Episode_SUS" = "Age"), keep = FALSE) %>% 
+  rename(female_ex = ex) %>% 
+  mutate(LE = case_when(Sex == 1 ~ male_ex,
+                        Sex == 2 ~ female_ex)) %>% 
+  select(-male_ex, -female_ex) %>% 
+  mutate(LE_round = round(LE,0)) %>% 
+  left_join(f_life_expectancy_discounted %>% select(1,2), by = c("LE_round" = "le"))
+
+# 
+f_waiting_times <-
+  e_hip_ip_week_number_wide %>% 
+  mutate(PC_def = case_when(
+    week_number < 12 ~ 0,
+    week_number >= 12 ~ Avg1819 - n_2020)) %>%  # Additional variable to start deficit from lockdown start
+  mutate(cum_def = cumsum(PC_def)) %>% 
+  mutate(weeks_left = 52 - week_number + 0.5) %>% 
+  mutate(add_weeks_waiting = PC_def*weeks_left) %>% 
+  mutate(cum_add_weeks_waiting = cumsum(add_weeks_waiting)) %>% 
+  filter(week_number != 53)
+
+# Literature derived estimate of effect of 1 week delay in hip procedure on QALYs
+f_qaly_loss_week <- 0.062/100 
+
+#Total estimated QALY lost in population due to covid
+f_total_qaly_loss <-
+  sum(f_waiting_times$cum_add_weeks_waiting) * f_qaly_loss_week 
+
+# Cost estimate
+# £20,000 per QALY 
+# 1 year
+f_total_qaly_loss_value <- 
+  f_total_qaly_loss *20000
+
+# Life time
+f_total_qaly_loss_value_lifetime <-
+  f_total_qaly_loss_value * 
+  (sum(f_hip_ip_Age_Gender_profile_LE$Admission_count) + 
+     sum(f_hip_ip_Age_Gender_profile_LE$le_disc)) / 
+  sum(f_hip_ip_Age_Gender_profile_LE$le_disc)
+
+# Disutility waiting 
+f_disutility_total <-
+  sum(f_waiting_times$cum_add_weeks_waiting) * 19
+
+paste(sum(f_waiting_times$PC_def), "admissions")
 
 ## G. Diabetes attendances - Index ####
 g_diabetes_demographic_index <-

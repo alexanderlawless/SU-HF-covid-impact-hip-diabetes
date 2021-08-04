@@ -968,7 +968,7 @@ e_hip_ip_annual_trends + e_hip_ip_admission_def_vis +
 # Total admission deficit number to quote
 e_hip_ip_total_admission_def <-
 e_hip_ip_week_number_wide %>% 
-  select(def) %>% 
+  select(PC_def) %>% 
   sum(na.rm = TRUE)
 
 ## E.3.2. Demographic index: Comparing 2020 to 18/19 mean by subgroups ####
@@ -1645,7 +1645,7 @@ LTR_union %>%
 # Executive summary 
 
 <br>
-National deficit of around 57k admissions for hip replacements between the onset of national lockdown (26th March 2020) and the end of 2020. Proportionally affecting the North West and South West NHSE regions most, where inpatient admissions during 2020 were over 50% less than would be expected. Lowest levels of disruption in London (approx. 30%) perhaps linked to differing approach to recovery where clinical hubs were set up to provide speciality-specific care.
+National deficit of around 58k admissions for hip replacements between the onset of national lockdown (26th March 2020) and the end of 2020. Proportionally affecting the North West and South West NHSE regions most, where inpatient admissions during 2020 were over 50% less than would be expected. Lowest levels of disruption in London (approx. 30%) perhaps linked to differing approach to recovery where clinical hubs were set up to provide speciality-specific care.
 
 <br>
 
@@ -2576,7 +2576,7 @@ These figures will continue to rise until the deficit is reduced, that is we rec
 <br>
 
 - Literature derived [2] QALY impact of 1 week delay in hip replacement surgery: __*0.00062*__ 
-- Cumulative admission deficit: `r paste(sum(f_waiting_times$PC_def), "admissions")` 
+- Cumulative admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")` 
 - Cumulative additional weeks waiting for hip replacement: `r paste(sum(f_waiting_times$cum_add_weeks_waiting), "weeks")`
 - QALYs lost by those waiting for hip procedures: `r paste(round(f_total_qaly_loss,1), "QALYS")`
 - Monetary value of QALYs lost by those waiting (year 1): `r paste0("£",round(f_total_qaly_loss_value,0))`
