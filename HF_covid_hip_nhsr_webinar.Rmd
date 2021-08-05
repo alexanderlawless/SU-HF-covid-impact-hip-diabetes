@@ -1361,7 +1361,7 @@ e_hip_ip_unplanned_week_number <-
   ungroup()
 
 # Annual trends
-e_hip_ip_week_number_wide <-
+e_hip_ip_unplanned_week_number_wide <-
   e_hip_ip_unplanned_week_number %>% 
   filter(year == 2020) %>% 
   rename(n_2020 = Admissions) %>% 
@@ -1380,7 +1380,7 @@ e_hip_ip_week_number_wide <-
   mutate(def = Avg1819 - n_2020)
 
 e_hip_total_admission_def_unplanned <-
-  e_hip_ip_week_number_wide %>% 
+  e_hip_ip_unplanned_week_number_wide %>% 
   select(def) %>% 
   sum(na.rm = TRUE) 
 
@@ -2298,7 +2298,7 @@ When viewing the trend in emergency, unplanned admissions for hip replacements, 
 <br>
 Fig. 4.2
 ``` {r Unplanned hip replacement - annual trends,  warning = FALSE, message = FALSE}
-e_hip_ip_week_number_wide %>%   
+e_hip_ip_unplanned_week_number_wide %>%   
   ggplot(aes(x = week_number, y = n_2020)) +
   # Covid timeline markers
   annotate("segment", x = 13, xend = 13, y = -Inf, yend = Inf, lty = 2) +
@@ -2331,7 +2331,7 @@ Outside of national lockdown periods, we see very similar admission rates for un
 Fig. 4.3
 ``` {r Unplanned hip replacement - cumulative deficit, warning = FALSE, message = FALSE}
 # Cumulative deficit
-e_hip_ip_week_number_wide %>% 
+e_hip_ip_unplanned_week_number_wide %>% 
   mutate(cum_def = cumsum(def)) %>% 
   ggplot(aes(x = week_number, y = cum_def)) +
   geom_smooth(method = "loess", span = 0.2, colour = "#f9bf07") +
