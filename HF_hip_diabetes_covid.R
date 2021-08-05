@@ -2178,7 +2178,10 @@ e_hip_ip_week_number %>%
   group_by(week_number) %>% 
   mutate(Avg1819 =  round(mean(c(n_2018, n_2019), na.rm=T))) %>% 
   ungroup() %>% 
-  mutate(def = Avg1819 - n_2020)
+  mutate(def = Avg1819 - n_2020)  %>% 
+  mutate(PC_def = case_when(
+    week_number < 13 ~ 0,
+    week_number >= 13 ~ Avg1819 - n_2020)) # Additional variable to start deficit from lockdown start
 
 e_hip_ip_week_number %>% 
   filter(year == 2020) %>% 
@@ -3295,21 +3298,21 @@ f_hip_ip_Age_Gender_profile_LE <-
 # 
 f_waiting_times <-
   e_hip_ip_week_number_wide %>% 
-  mutate(PC_def = case_when(
-    week_number < 12 ~ 0,
-    week_number >= 12 ~ Avg1819 - n_2020)) %>%  # Additional variable to start deficit from lockdown start
-  mutate(cum_def = cumsum(PC_def)) %>% 
-  mutate(weeks_left = 52 - week_number + 0.5) %>% 
-  mutate(add_weeks_waiting = PC_def*weeks_left) %>% 
-  mutate(cum_add_weeks_waiting = cumsum(add_weeks_waiting)) %>% 
+  mutate(cum_def = cumsum(PC_def)) %>% # cumulative deficit
+  mutate(weeks_left = 52 - week_number + 0.5) %>%  # Weeks left in year 
+  mutate(add_weeks_waiting = PC_def*weeks_left) %>%  # Additional weeks waiting for care
+  mutate(cum_add_weeks_waiting = cumsum(add_weeks_waiting)) %>% # Cumulative weeks waiting
   filter(week_number != 53)
 
 # Literature derived estimate of effect of 1 week delay in hip procedure on QALYs
 f_qaly_loss_week <- 0.062/100 
 
+# cumulative additional weeks waiting multiplied by qaly-loss of 1 week waiting 
 #Total estimated QALY lost in population due to covid
 f_total_qaly_loss <-
-  sum(f_waiting_times$cum_add_weeks_waiting) * f_qaly_loss_week 
+  #sum(f_waiting_times$cum_add_weeks_waiting) * f_qaly_loss_week 
+  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * f_qaly_loss_week 
+
 
 # Cost estimate
 # £20,000 per QALY 
@@ -3320,15 +3323,14 @@ f_total_qaly_loss_value <-
 # Life time
 f_total_qaly_loss_value_lifetime <-
   f_total_qaly_loss_value * 
-  (sum(f_hip_ip_Age_Gender_profile_LE$Admission_count) + 
-     sum(f_hip_ip_Age_Gender_profile_LE$le_disc)) / 
-  sum(f_hip_ip_Age_Gender_profile_LE$le_disc)
+  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count * f_hip_ip_Age_Gender_profile_LE$le_disc) / 
+  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count)
+
 
 # Disutility waiting 
 f_disutility_total <-
-  sum(f_waiting_times$cum_add_weeks_waiting) * 19
+  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * 19
 
-paste(sum(f_waiting_times$PC_def), "admissions")
 
 ## G. Diabetes attendances - Index ####
 g_diabetes_demographic_index <-

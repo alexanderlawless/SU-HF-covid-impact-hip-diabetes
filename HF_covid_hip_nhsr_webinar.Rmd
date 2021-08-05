@@ -1668,7 +1668,7 @@ National deficit of around 58k admissions for hip replacements between the onset
 **COVID-19 impact on quality of life**
 
 <br>
-As of January 2021, the increased waiting for hip replacements resulted in a loss of approx 890 QALYs. Converting this figure to a monetary value, at £20k per QALY and discounting by 3.5% per year, values the total lifetime loss at £426 million. In addition, the disutility of increased waiting can be estimated at £27 million.
+As of January 2021, the increased waiting for hip replacements resulted in a loss of approx 895 QALYs. Converting this figure to a monetary value, at £20k per QALY and discounting by 3.5% per year, values the total lifetime loss at £223 million. In addition, the disutility of increased waiting can be estimated at £27 million.
 
 
 
@@ -2568,7 +2568,7 @@ When comparing proportional admission deficit for planned and unplanned care, it
 
 # Quality of life effects 
 
-As of January 2021, the increased waiting for hip replacements resulted in a loss of approx __*890*__ QALYs. Converting this figure to a monetary value, at __*£20k*__ per QALY and discounting by __*3.5%*__ per year, values the total lifetime loss at __*£426 million*__. In addition, the disutility of increased waiting can be estimated at __*£27 million*__. 
+As of January 2021, the increased waiting for hip replacements resulted in a loss of approx __*895*__ QALYs. Converting this figure to a monetary value, at __*£20k*__ per QALY and discounting by __*3.5%*__ per year, values the total lifetime loss at __*£223 million*__. In addition, the disutility of increased waiting can be estimated at __*£27 million*__. 
 <br>
 <br>
 These figures will continue to rise until the deficit is reduced, that is we recover all the activity lost due to covid-19. Details below:
@@ -2576,13 +2576,12 @@ These figures will continue to rise until the deficit is reduced, that is we rec
 <br>
 
 - Literature derived [2] QALY impact of 1 week delay in hip replacement surgery: __*0.00062*__ 
-- Total admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")` 
-- Cumulative additional weeks waiting for hip replacement: `r paste(sum(f_waiting_times$cum_add_weeks_waiting), "weeks")`
+- Total admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")`
+- Cumulative additional weeks waiting for hip replacement: `r paste(f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52], "weeks")`
 - QALYs lost by those waiting for hip procedures: `r paste(round(f_total_qaly_loss,1), "QALYS")`
 - Monetary value of QALYs lost by those waiting (year 1): `r paste0("£",round(f_total_qaly_loss_value,0))`
 - Monetary value of lifetime lost of QALYs: `r paste0("£",round(f_total_qaly_loss_value_lifetime,0))`
 - Disutility of waiting for hip procedures: `r paste0("£",round(f_disutility_total,0))`
-
 
 <br>
 <br>
