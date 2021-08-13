@@ -1534,32 +1534,33 @@ f_waiting_times <-
   mutate(cum_add_weeks_waiting = cumsum(add_weeks_waiting)) %>% # Cumulative weeks waiting
   filter(week_number != 53)
 
-# Literature derived estimate of effect of 1 week delay in hip procedure on QALYs
-f_qaly_loss_week <- 0.062/100 
+# Cumulative waiting times
+f_cum_add_weeks_waiting <- f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52]
+f_cum_add_years_waiting <- f_cum_add_weeks_waiting/52
 
-# cumulative additional weeks waiting multiplied by qaly-loss of 1 week waiting 
-#Total estimated QALY lost in population due to covid
-f_total_qaly_loss <-
-  #sum(f_waiting_times$cum_add_weeks_waiting) * f_qaly_loss_week 
-  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * f_qaly_loss_week 
+# Pre-op 
+f_eq5d_pre_op <- 0.342
+f_eq5d_post_op <- 0.802
+f_eq5d_gain <- f_eq5d_post_op - f_eq5d_pre_op
+f_qaly_loss_preop <- f_cum_add_years_waiting * f_eq5d_gain
 
+# Post-op
+# Lit-derived estimate of effect of 1 week delay in hip procedure on post-op QALYs
+f_qaly_loss_week_postop <- 0.062/100  
+# Estimated QALY lost in population
+f_qaly_loss_postop <- f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * f_qaly_loss_week_postop 
+# Life-time QALY lost in population
+f_qaly_loss_lifetime_postop <- f_qaly_loss_postop * 18
 
-# Cost estimate
-# £20,000 per QALY 
-# 1 year
-f_total_qaly_loss_value <- 
-  f_total_qaly_loss *20000
+# Combined QALY impact
+comb_qaly_lost <- f_qaly_loss_preop + f_qaly_loss_postop
+comb_qaly_lost_lifetime <- f_qaly_loss_preop + f_qaly_loss_lifetime_postop
 
-# Life time
-f_total_qaly_loss_value_lifetime <-
-  f_total_qaly_loss_value * 
-  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count * f_hip_ip_Age_Gender_profile_LE$le_disc) / 
-  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count)
+# Monetary value of QALY impact (discounted)
+comb_qaly_lost_value <- comb_qaly_lost_lifetime * 20000
+comb_qaly_lost_value_lifetime <-  20000 * (f_qaly_loss_preop + f_qaly_loss_lifetime_postop * (12.4 /  18.0))
+f_disulity <- f_cum_add_weeks_waiting * 19
 
-
-# Disutility waiting 
-f_disutility_total <-
-  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * 19
 ## G. London-style recovery model ####
 # Regin specific data frames 
 
@@ -1670,12 +1671,10 @@ National deficit of around 58k admissions for hip replacements between the onset
 -	Deprivation gradient seen in unplanned and planned admission disruption.
 
 <br>
+
 **COVID-19 impact on quality of life**
 
-<br>
-As of January 2021, the increased waiting for hip replacements resulted in a loss of approx 895 QALYs. Converting this figure to a monetary value, at £20k per QALY and discounting by 3.5% per year, values the total lifetime loss at £223 million. In addition, the disutility of increased waiting can be estimated at £27 million.
-
-
+As of January 2021, increased waiting times for hip replacements resulted in a loss of **28,893 QALYs**; **12 thousand** lost QALYs were a direct result of reduced quality of life while waiting for treatment, while **16 thousand** lost QALYs represent worst patient outcomes (pain, reduced functioning etc) as a result of delayed treatment. Converting this figure to a monetary value, at **£20k per QALY** and discounting by **3.5%** per year, values the total loss at **£478  million**. In addition, the disutility of increased waiting can be estimated at **£27 million**.
 
 # Background 
 
@@ -2506,24 +2505,47 @@ When comparing proportional admission deficit for planned and unplanned care, it
 
 # Quality of life effects 
 
-As of January 2021, the increased waiting for hip replacements resulted in a loss of approx __*895*__ QALYs. Converting this figure to a monetary value, at __*£20k*__ per QALY and discounting by __*3.5%*__ per year, values the total lifetime loss at __*£223 million*__. In addition, the disutility of increased waiting can be estimated at __*£27 million*__. 
 <br>
-<br>
-These figures will continue to rise until the deficit is reduced, that is we recover all the activity lost due to covid-19. Details below:
-<br>
-<br>
+The quality of life implications relating to hip replacement surgery are impactful for the patient in both the pre- and post-operative stages of their care. Delays to care are thought to be more substantial in the pre-op phase but only last until surgery is provided; inversely, diminished quality of life in post-surgical patients is much less but may last for the remainder of their lives. Details below:
 
-- Literature derived [2] QALY impact of 1 week delay in hip replacement surgery: __*0.00062*__ 
+**Pre-operative impact on Quality of life**
+
+The methodology for calculating the pre-surgery impacts of delayed hip replacements is as follows:
+
+- Number of additional weeks waiting for hip replacements: `r paste(round(f_cum_add_weeks_waiting,0), "weeks")` 
+- The number of additional years waiting is (1,444,251 / 52): `r paste(round(f_cum_add_years_waiting,0), "years")`
+- Average EQ5D prior to hip surgery: `r f_eq5d_pre_op`
+- Average EQ5D after to hip surgery: `r f_eq5d_post_op`
+- EQ5D gain following hip replacement (0.802 – 0.342): `r f_eq5d_gain`
+    - These are taken from <https://digital.nhs.uk/data-and-information/publications/statistical/patient-reported-outcome-measures-proms/hip-and-knee-replacement-procedures-april-2019-to-march-2020>.  
+    - EQ5D runs from 0 to 1 with 1 being a state of perfect health and 0 being dead - although it is technically possible to have a state less then zero.  
+    - Living a year with EQSD=1 is 1 QALY, as is living two years with EQ5D=0.5
+- The pre-operative QALY loss of waiting `r paste(round(f_cum_add_weeks_waiting,0), "weeks")` additional weeks for hip replacements is `r paste(round(f_cum_add_years_waiting,0), "years")` x `r f_eq5d_gain` = `r paste(round(f_qaly_loss_preop,0), "QALYs")`
+
+
+**Post-operative impact on Quality of life**
+
+- Literature derived [2] post-surgical QALY impact of 1 week delay in hip replacement surgery: `r f_qaly_loss_week_postop`
 - Total admission deficit: `r paste(e_hip_ip_total_admission_def, "admissions")`
-- Cumulative additional weeks waiting for hip replacement: `r paste(f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52], "weeks")`
-- QALYs lost by those waiting for hip procedures: `r paste(round(f_total_qaly_loss,1), "QALYS")`
-- Monetary value of QALYs lost by those waiting (year 1): `r paste0("£",round(f_total_qaly_loss_value,0))`
-- Monetary value of lifetime lost of QALYs: `r paste0("£",round(f_total_qaly_loss_value_lifetime,0))`
-- Disutility of waiting for hip procedures: `r paste0("£",round(f_disutility_total,0))`
+- Cumulative additional weeks waiting for hip replacement: `r paste(f_cum_add_weeks_waiting, "weeks")`
+- QALYs lost by those waiting for hip procedures: `r paste(round(f_qaly_loss_postop,1), "QALYs")`
+- Lifetime QALYs lost by those waiting for hip procedures: `r paste(round(f_qaly_loss_lifetime_postop,1), "QALYs")`
 
- 
 
+**Monetary value of combined lost QALYs**
+
+- Combined QALYs lost (pre- and post-surgery): **28,894 QALYs = 12776 + 16118**
+- Monetary value of lifetime lost of QALYs (discounted by 3.5%) :  **£477.6m = 20000 x (12776 + 16118 x (12.4 / 18.0))**
+- Disutility of waiting for hip procedures: **£27.4m**
+
+
+**Summary**
+
+As of January 2021, increased waiting times for hip replacements resulted in a loss of **28,893 QALYs**; **12 thousand** lost QALYs were a direct result of reduced quality of life while waiting for treatment, while **16 thousand** lost QALYs represent worst patient outcomes (pain, reduced functioning etc) as a result of delayed treatment. Converting this figure to a monetary value, at **£20k per QALY** and discounting by **3.5%** per year, values the total loss at **£478  million**. In addition, the disutility of increased waiting can be estimated at **£27 million**. 
 <br>
+<br>
+These figures will continue to rise until the deficit is reduced, that is we recover all the activity lost due to covid-19. 
+
 <br>
 <br>
 

@@ -2254,6 +2254,13 @@ e_hip_total_admission_def <-
 e_hip_ip_week_number_wide %>% 
   select(def) %>% 
   sum(na.rm = TRUE)
+
+e_hip_ip_total_admission_def_cumulative <-
+  e_hip_ip_week_number_wide %>% 
+  mutate(cum_def = cumsum(PC_def)) %>% 
+  filter(week_number == 52) %>% 
+  select(PC_def) %>%
+  sum(na.rm = TRUE) 
   
 
 ## E.3.2. Demographic index: Comparing 2020 to 18/19 mean by subgroups ####
@@ -3304,32 +3311,32 @@ f_waiting_times <-
   mutate(cum_add_weeks_waiting = cumsum(add_weeks_waiting)) %>% # Cumulative weeks waiting
   filter(week_number != 53)
 
-# Literature derived estimate of effect of 1 week delay in hip procedure on QALYs
-f_qaly_loss_week <- 0.062/100 
+# Cumulative waiting times
+f_cum_add_weeks_waiting <- f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52]
+f_cum_add_years_waiting <- f_cum_add_weeks_waiting/52
 
-# cumulative additional weeks waiting multiplied by qaly-loss of 1 week waiting 
-#Total estimated QALY lost in population due to covid
-f_total_qaly_loss <-
-  #sum(f_waiting_times$cum_add_weeks_waiting) * f_qaly_loss_week 
-  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * f_qaly_loss_week 
+# Pre-op 
+f_eq5d_pre_op <- 0.342
+f_eq5d_post_op <- 0.802
+f_eq5d_gain <- f_eq5d_post_op - f_eq5d_pre_op
+f_qaly_loss_preop <- f_cum_add_years_waiting * f_eq5d_gain
 
+# Post-op
+# Lit-derived estimate of effect of 1 week delay in hip procedure on post-op QALYs
+f_qaly_loss_week_postop <- 0.062/100  
+# Estimated QALY lost in population
+f_qaly_loss_postop <- f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * f_qaly_loss_week_postop 
+# Life-time QALY lost in population
+f_qaly_loss_lifetime_postop <- f_qaly_loss_postop * 18
 
-# Cost estimate
-# £20,000 per QALY 
-# 1 year
-f_total_qaly_loss_value <- 
-  f_total_qaly_loss *20000
+# Combined QALY impact
+comb_qaly_lost <- f_qaly_loss_preop + f_qaly_loss_postop
+comb_qaly_lost_lifetime <- f_qaly_loss_preop + f_qaly_loss_lifetime_postop
 
-# Life time
-f_total_qaly_loss_value_lifetime <-
-  f_total_qaly_loss_value * 
-  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count * f_hip_ip_Age_Gender_profile_LE$le_disc) / 
-  sum(f_hip_ip_Age_Gender_profile_LE$Admission_count)
-
-
-# Disutility waiting 
-f_disutility_total <-
-  f_waiting_times$cum_add_weeks_waiting[f_waiting_times$week_number == 52] * 19
+# Monetary value of QALY impact (discounted)
+comb_qaly_lost_value <- comb_qaly_lost_lifetime *20000
+comb_qaly_lost_value_lifetime <-  20000 * (f_qaly_loss_preop + f_qaly_loss_lifetime_postop * (12.4 /  18.0))
+f_disulity <- f_cum_add_weeks_waiting * 19
 
 
 ## G. Diabetes attendances - Index ####
